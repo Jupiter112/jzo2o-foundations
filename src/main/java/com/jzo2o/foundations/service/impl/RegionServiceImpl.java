@@ -21,6 +21,7 @@ import com.jzo2o.foundations.model.dto.request.RegionUpsertReqDTO;
 import com.jzo2o.foundations.model.dto.response.RegionResDTO;
 import com.jzo2o.foundations.service.IConfigRegionService;
 import com.jzo2o.foundations.service.IRegionService;
+import com.jzo2o.foundations.service.IServeService;
 import com.jzo2o.mysql.utils.PageUtils;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
@@ -39,6 +40,8 @@ import java.util.List;
  **/
 @Service
 public class RegionServiceImpl extends ServiceImpl<RegionMapper, Region> implements IRegionService {
+    @Resource
+    private IServeService serveService;
     @Resource
     private IConfigRegionService configRegionService;
     @Resource
@@ -130,6 +133,7 @@ public class RegionServiceImpl extends ServiceImpl<RegionMapper, Region> impleme
      * @return 区域列表
      */
     @Override
+    @Cacheable(value = RedisConstants.CacheName.JZ_CACHE, key = "'ACTIVE_REGION'", cacheManager = RedisConstants.CacheManager.FOREVER)
     public List<RegionSimpleResDTO> queryActiveRegionList() {
         LambdaQueryWrapper<Region> queryWrapper = Wrappers.<Region>lambdaQuery()
                 .eq(Region::getActiveStatus, FoundationStatusEnum.ENABLE.getStatus())
@@ -160,7 +164,11 @@ public class RegionServiceImpl extends ServiceImpl<RegionMapper, Region> impleme
             throw new ForbiddenOperationException("草稿或禁用状态方可启用");
         }
         //如果需要启用区域，需要校验该区域下是否有上架的服务
-        //todo
+        int count = serveService.queryServeCountByRegionIdAndSaleStatus(id, FoundationStatusEnum.ENABLE.getStatus());
+        if (count <= 0) {
+            //如果区域下不存在上架的服务，不允许启用
+            throw new ForbiddenOperationException("区域下不存在上架的服务，不允许启用");
+        }
 
         //更新启用状态
         LambdaUpdateWrapper<Region> updateWrapper = Wrappers.<Region>lambdaUpdate()
@@ -195,11 +203,10 @@ public class RegionServiceImpl extends ServiceImpl<RegionMapper, Region> impleme
         }
 
         //1.如果禁用区域下有上架的服务则无法禁用
-        //todo
-//        int count = serveService.queryServeCountByRegionIdAndSaleStatus(id, FoundationStatusEnum.ENABLE.getStatus());
-//        if (count > 0) {
-//            throw new ForbiddenOperationException("区域下有上架的服务无法禁用");
-//        }
+        int count = serveService.queryServeCountByRegionIdAndSaleStatus(id, FoundationStatusEnum.ENABLE.getStatus());
+        if (count > 0) {
+            throw new ForbiddenOperationException("区域下有上架的服务无法禁用");
+        }
 
         //更新禁用状态
         LambdaUpdateWrapper<Region> updateWrapper = Wrappers.<Region>lambdaUpdate()
@@ -214,7 +221,6 @@ public class RegionServiceImpl extends ServiceImpl<RegionMapper, Region> impleme
      * @return 区域简略列表
      */
     @Override
-    @Cacheable(value = RedisConstants.CacheName.JZ_CACHE, key = "'ACTIVE_REGIONS'", cacheManager = RedisConstants.CacheManager.FOREVER)
     public List<RegionSimpleResDTO> queryActiveRegionListCache() {
         return queryActiveRegionList();
     }
