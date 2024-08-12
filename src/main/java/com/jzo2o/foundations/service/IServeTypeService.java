@@ -67,4 +67,5 @@ public interface IServeTypeService extends IService<ServeType> {
      * @return 服务类型列表
      */
     List<ServeTypeSimpleResDTO> queryServeTypeListByActiveStatus(Integer activeStatus);
+
 }

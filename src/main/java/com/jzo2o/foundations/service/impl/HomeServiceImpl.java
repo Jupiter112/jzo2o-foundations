@@ -1,14 +1,21 @@
 package com.jzo2o.foundations.service.impl;
 
 import cn.hutool.core.util.ObjectUtil;
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.jzo2o.foundations.constants.RedisConstants;
 import com.jzo2o.foundations.enums.FoundationStatusEnum;
 import com.jzo2o.foundations.mapper.ServeMapper;
 import com.jzo2o.foundations.model.domain.Region;
+import com.jzo2o.foundations.model.domain.Serve;
+import com.jzo2o.foundations.model.domain.ServeItem;
+import com.jzo2o.foundations.model.dto.response.ServeAggregationSimpleResDTO;
+import com.jzo2o.foundations.model.dto.response.ServeAggregationTypeSimpleResDTO;
 import com.jzo2o.foundations.model.dto.response.ServeCategoryResDTO;
 import com.jzo2o.foundations.model.dto.response.ServeSimpleResDTO;
 import com.jzo2o.foundations.service.HomeService;
 import com.jzo2o.foundations.service.IRegionService;
+import com.jzo2o.foundations.service.IServeItemService;
+import com.jzo2o.foundations.service.IServeService;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
@@ -31,7 +38,10 @@ public class HomeServiceImpl implements HomeService {
     private IRegionService regionService;
 
     @Resource
-    private ServeMapper serveMapper;
+    private IServeService serveService;
+
+    @Resource
+    private IServeItemService serveItemService;
 
     /**
      * 根据区域id查询已开通的服务类型
@@ -55,7 +65,7 @@ public class HomeServiceImpl implements HomeService {
             return Collections.emptyList();
         }
         // 2. 根据城市编码查询所有的服务图标
-        List<ServeCategoryResDTO> list = serveMapper.findServeIconCategoryByRegionId(regionId);
+        List<ServeCategoryResDTO> list = serveService.findServeIconCategoryByRegionId(regionId);
         if(ObjectUtil.isNull(list)){
             return Collections.emptyList();
         }
@@ -73,4 +83,63 @@ public class HomeServiceImpl implements HomeService {
 
         return serveCategoryResDTOS;
     }
+
+    @Override
+    @Caching(
+            cacheable = {
+                    // result 为null时，属于缓存穿透情况，缓存时间为30分钟
+                    @Cacheable(value = RedisConstants.CacheName.SERVE_TYPE, key = "#regionId", unless = "#result.size()!=0", cacheManager = RedisConstants.CacheManager.THIRTY_MINUTES),
+                    // result 不为null时，永久缓存
+                    @Cacheable(value = RedisConstants.CacheName.SERVE_TYPE, key = "#regionId", unless = "#result.size()==0", cacheManager = RedisConstants.CacheManager.FOREVER)
+            }
+    )
+    public List<ServeAggregationTypeSimpleResDTO> queryServeTypeListByRegionIdCache(Long regionId) {
+        // 1. 校验当前城市是否为启用状态
+        Region region = regionService.getById(regionId);
+        if(ObjectUtil.isNull(region) || ObjectUtil.equal(FoundationStatusEnum.DISABLE.getStatus(), region.getActiveStatus())){
+            return Collections.emptyList();
+        }
+        // 2. 根据城市编码查询服务对应的服务类型
+        List<ServeAggregationTypeSimpleResDTO> list = serveService.findServeTypeListByRegionId(regionId);
+        if(ObjectUtil.isNull(list)){
+            return Collections.emptyList();
+        }
+        return list;
+    }
+
+    @Override
+    @Caching(
+            cacheable = {
+                    // result 为null时，属于缓存穿透情况，缓存时间为30分钟
+                    @Cacheable(value = RedisConstants.CacheName.HOT_SERVE, key = "#regionId", unless = "#result.size()!=0", cacheManager = RedisConstants.CacheManager.THIRTY_MINUTES),
+                    // result 不为null时，永久缓存
+                    @Cacheable(value = RedisConstants.CacheName.HOT_SERVE, key = "#regionId", unless = "#result.size()==0", cacheManager = RedisConstants.CacheManager.FOREVER)
+            }
+    )
+    public List<ServeAggregationSimpleResDTO> findHotServeListByRegionIdCache(Long regionId) {
+        // 1. 校验当前城市是否为启用状态
+        Region region = regionService.getById(regionId);
+        if(ObjectUtil.isNull(region) || ObjectUtil.equal(FoundationStatusEnum.DISABLE.getStatus(), region.getActiveStatus())){
+            return Collections.emptyList();
+        }
+        // 2. 根据城市编码查询热门服务
+        List<ServeAggregationSimpleResDTO> list = serveService.findHotServeListByRegionId(regionId);
+        if(ObjectUtil.isNull(list)){
+            return Collections.emptyList();
+        }
+        return list;
+    }
+
+    @Override
+    @Cacheable(value = RedisConstants.CacheName.SERVE, key = "#id", cacheManager = RedisConstants.CacheManager.ONE_DAY)
+    public Serve queryServeByIdCache(Long id) {
+        return serveService.getById(id);
+    }
+
+    @Override
+    @Cacheable(value = RedisConstants.CacheName.SERVE_ITEM, key = "#id", cacheManager = RedisConstants.CacheManager.ONE_DAY)
+    public ServeItem queryServeItemByIdCache(Long serveItemId) {
+        return serveItemService.getById(serveItemId);
+    }
+
 }

@@ -5,6 +5,9 @@ import com.jzo2o.common.model.PageResult;
 import com.jzo2o.foundations.model.domain.Serve;
 import com.jzo2o.foundations.model.dto.request.ServePageQueryReqDTO;
 import com.jzo2o.foundations.model.dto.request.ServeUpsertReqDTO;
+import com.jzo2o.foundations.model.dto.response.ServeAggregationSimpleResDTO;
+import com.jzo2o.foundations.model.dto.response.ServeAggregationTypeSimpleResDTO;
+import com.jzo2o.foundations.model.dto.response.ServeCategoryResDTO;
 import com.jzo2o.foundations.model.dto.response.ServeResDTO;
 
 import java.math.BigDecimal;
@@ -97,5 +100,15 @@ public interface IServeService extends IService<Serve> {
      * @return 服务数量
      */
     int queryServeCountByServeItemIdAndSaleStatus(Long serveItemId, Integer saleStatus);
+
+    List<ServeAggregationTypeSimpleResDTO> findServeTypeListByRegionId(Long regionId);
+
+    List<ServeCategoryResDTO> findServeIconCategoryByRegionId(Long regionId);
+
+    List<ServeAggregationSimpleResDTO> findHotServeListByRegionId(Long regionId);
+
+    ServeAggregationSimpleResDTO findDetailById(Long id);
+
+    List<Serve> queryHotAndOnSaleServeList();
 
 }

@@ -28,4 +28,10 @@ public interface ServeMapper extends BaseMapper<Serve> {
     List<ServeResDTO> queryServeListByRegionId(@Param("regionId") Long regionId);
 
     List<ServeCategoryResDTO> findServeIconCategoryByRegionId(@Param("regionId") Long regionId);
+
+    List<ServeAggregationTypeSimpleResDTO> findServeTypeListByRegionId(Long regionId);
+
+    List<ServeAggregationSimpleResDTO> findHotServeListByRegionId(Long regionId);
+
+    ServeAggregationSimpleResDTO findDetailById(Long id);
 }

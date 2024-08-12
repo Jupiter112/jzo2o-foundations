@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.jzo2o.common.enums.EnableStatusEnum;
 import com.jzo2o.common.expcetions.ForbiddenOperationException;
 import com.jzo2o.common.model.PageResult;
 import com.jzo2o.foundations.constants.RedisConstants;
@@ -19,6 +20,9 @@ import com.jzo2o.foundations.model.domain.ServeItem;
 import com.jzo2o.foundations.model.domain.ServeSync;
 import com.jzo2o.foundations.model.dto.request.ServePageQueryReqDTO;
 import com.jzo2o.foundations.model.dto.request.ServeUpsertReqDTO;
+import com.jzo2o.foundations.model.dto.response.ServeAggregationSimpleResDTO;
+import com.jzo2o.foundations.model.dto.response.ServeAggregationTypeSimpleResDTO;
+import com.jzo2o.foundations.model.dto.response.ServeCategoryResDTO;
 import com.jzo2o.foundations.model.dto.response.ServeResDTO;
 import com.jzo2o.foundations.service.IServeService;
 import com.jzo2o.mysql.utils.PageHelperUtils;
@@ -226,6 +230,39 @@ public class ServeServiceImpl extends ServiceImpl<ServeMapper, Serve> implements
                 .eq(Serve::getServeItemId, serveItemId)
                 .eq(ObjectUtil.isNotEmpty(saleStatus), Serve::getSaleStatus, saleStatus);
         return baseMapper.selectCount(queryWrapper);
+    }
+
+    /**
+     * 查询热门服务列表
+     *
+     * @return 热门服务列表
+     */
+    @Override
+    public List<Serve> queryHotAndOnSaleServeList() {
+        LambdaQueryWrapper<Serve> queryWrapper = Wrappers.<Serve>lambdaQuery()
+                .eq(Serve::getIsHot, EnableStatusEnum.ENABLE.getStatus())
+                .eq(Serve::getSaleStatus, FoundationStatusEnum.ENABLE.getStatus());
+        return baseMapper.selectList(queryWrapper);
+    }
+
+    @Override
+    public List<ServeAggregationTypeSimpleResDTO> findServeTypeListByRegionId(Long regionId) {
+        return baseMapper.findServeTypeListByRegionId(regionId);
+    }
+
+    @Override
+    public List<ServeCategoryResDTO> findServeIconCategoryByRegionId(Long regionId) {
+        return baseMapper.findServeIconCategoryByRegionId(regionId);
+    }
+
+    @Override
+    public List<ServeAggregationSimpleResDTO> findHotServeListByRegionId(Long regionId) {
+        return baseMapper.findHotServeListByRegionId(regionId);
+    }
+
+    @Override
+    public ServeAggregationSimpleResDTO findDetailById(Long id) {
+        return baseMapper.findDetailById(id);
     }
 
 }
