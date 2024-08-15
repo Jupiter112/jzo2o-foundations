@@ -18,13 +18,14 @@ import com.jzo2o.foundations.model.domain.CityDirectory;
 import com.jzo2o.foundations.model.domain.Region;
 import com.jzo2o.foundations.model.dto.request.RegionPageQueryReqDTO;
 import com.jzo2o.foundations.model.dto.request.RegionUpsertReqDTO;
+import com.jzo2o.foundations.model.dto.response.RegionDisplayResDTO;
 import com.jzo2o.foundations.model.dto.response.RegionResDTO;
+import com.jzo2o.foundations.service.HomeService;
 import com.jzo2o.foundations.service.IConfigRegionService;
 import com.jzo2o.foundations.service.IRegionService;
 import com.jzo2o.foundations.service.IServeService;
 import com.jzo2o.mysql.utils.PageUtils;
 import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -46,6 +47,8 @@ public class RegionServiceImpl extends ServiceImpl<RegionMapper, Region> impleme
     private IConfigRegionService configRegionService;
     @Resource
     private CityDirectoryMapper cityDirectoryMapper;
+    @Resource
+    private HomeService homeService;
 
 
     /**
@@ -133,7 +136,6 @@ public class RegionServiceImpl extends ServiceImpl<RegionMapper, Region> impleme
      * @return 区域列表
      */
     @Override
-    @Cacheable(value = RedisConstants.CacheName.JZ_CACHE, key = "'ACTIVE_REGION'", cacheManager = RedisConstants.CacheManager.FOREVER)
     public List<RegionSimpleResDTO> queryActiveRegionList() {
         LambdaQueryWrapper<Region> queryWrapper = Wrappers.<Region>lambdaQuery()
                 .eq(Region::getActiveStatus, FoundationStatusEnum.ENABLE.getStatus())
@@ -177,7 +179,10 @@ public class RegionServiceImpl extends ServiceImpl<RegionMapper, Region> impleme
         update(updateWrapper);
 
         //3.如果是启用操作，刷新缓存：启用区域列表、首页图标、热门服务、服务类型
-        // todo
+        homeService.queryActiveRegionListCache();
+        homeService.queryServeIconCategoryByRegionIdCache(id);
+        homeService.findHotServeListByRegionIdCache(id);
+        homeService.queryServeTypeListByRegionIdCache(id);
     }
 
     /**
@@ -215,14 +220,5 @@ public class RegionServiceImpl extends ServiceImpl<RegionMapper, Region> impleme
         update(updateWrapper);
     }
 
-    /**
-     * 已开通服务区域列表
-     *
-     * @return 区域简略列表
-     */
-    @Override
-    public List<RegionSimpleResDTO> queryActiveRegionListCache() {
-        return queryActiveRegionList();
-    }
 
 }

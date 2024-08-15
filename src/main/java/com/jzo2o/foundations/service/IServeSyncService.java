@@ -3,9 +3,6 @@ package com.jzo2o.foundations.service;
 import com.jzo2o.foundations.model.domain.ServeSync;
 import com.jzo2o.foundations.model.dto.request.ServeSyncUpdateReqDTO;
 import com.baomidou.mybatisplus.extension.service.IService;
-import com.jzo2o.foundations.model.dto.response.ServeSimpleResDTO;
-
-import java.util.List;
 
 /**
  * <p>
@@ -31,6 +28,4 @@ public interface IServeSyncService extends IService<ServeSync> {
      * @param serveSyncUpdateReqDTO 服务同步更新数据
      */
     void updateByServeTypeId(Long serveTypeId, ServeSyncUpdateReqDTO serveSyncUpdateReqDTO);
-
-    List<ServeSimpleResDTO> findServeList(String cityCode, Long serveTypeId, String keyword);
 }

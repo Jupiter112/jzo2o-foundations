@@ -2,10 +2,11 @@ package com.jzo2o.foundations.controller.consumer;
 
 
 import com.jzo2o.api.foundations.dto.response.RegionSimpleResDTO;
+import com.jzo2o.foundations.model.dto.response.RegionDisplayResDTO;
+import com.jzo2o.foundations.service.HomeService;
 import com.jzo2o.foundations.service.IRegionService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -21,18 +22,19 @@ import java.util.List;
  * @author itcast
  * @since 2023-07-03
  */
-@Validated
 @RestController("consumerRegionController")
 @RequestMapping("/consumer/region")
 @Api(tags = "用户端 - 区域相关接口")
 public class RegionController {
+    @Resource
+    private HomeService homeService;
     @Resource
     private IRegionService regionService;
 
     @GetMapping("/activeRegionList")
     @ApiOperation("已开通服务区域列表")
     public List<RegionSimpleResDTO> activeRegionList() {
-        return regionService.queryActiveRegionListCache();
+        return homeService.queryActiveRegionListCache();
     }
 
 }

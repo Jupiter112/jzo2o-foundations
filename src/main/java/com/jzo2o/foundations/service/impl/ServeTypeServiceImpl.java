@@ -14,13 +14,11 @@ import com.jzo2o.common.expcetions.ForbiddenOperationException;
 import com.jzo2o.common.model.PageResult;
 import com.jzo2o.foundations.enums.FoundationStatusEnum;
 import com.jzo2o.foundations.mapper.ServeTypeMapper;
-import com.jzo2o.foundations.model.domain.Region;
 import com.jzo2o.foundations.model.domain.ServeType;
 import com.jzo2o.foundations.model.dto.request.ServeSyncUpdateReqDTO;
 import com.jzo2o.foundations.model.dto.request.ServeTypePageQueryReqDTO;
 import com.jzo2o.foundations.model.dto.request.ServeTypeUpsertReqDTO;
 import com.jzo2o.foundations.model.dto.response.ServeTypeResDTO;
-import com.jzo2o.foundations.service.IRegionService;
 import com.jzo2o.foundations.service.IServeItemService;
 import com.jzo2o.foundations.service.IServeSyncService;
 import com.jzo2o.foundations.service.IServeTypeService;
@@ -128,9 +126,9 @@ public class ServeTypeServiceImpl extends ServiceImpl<ServeTypeMapper, ServeType
         }
         //启用状态
         Integer activeStatus = serveType.getActiveStatus();
-        //未启用状态方可禁用
-        if (FoundationStatusEnum.ENABLE.getStatus() != activeStatus) {
-            throw new ForbiddenOperationException("未启用状态下不可禁用");
+        //启用状态方可禁用
+        if (!(FoundationStatusEnum.ENABLE.getStatus() == activeStatus)) {
+            throw new ForbiddenOperationException("启用状态方可禁用");
         }
         //下属服务项全部为非启用方可禁用
         int count = serveItemService.queryActiveServeItemCountByServeTypeId(id);
@@ -160,7 +158,7 @@ public class ServeTypeServiceImpl extends ServiceImpl<ServeTypeMapper, ServeType
         //启用状态
         Integer activeStatus = serveType.getActiveStatus();
         //草稿状态方可删除
-        if (FoundationStatusEnum.INIT.getStatus() != activeStatus) {
+        if (!(FoundationStatusEnum.INIT.getStatus() == activeStatus)) {
             throw new ForbiddenOperationException("草稿状态方可删除");
         }
         baseMapper.deleteById(id);
@@ -194,5 +192,4 @@ public class ServeTypeServiceImpl extends ServiceImpl<ServeTypeMapper, ServeType
         List<ServeType> serveTypeList = baseMapper.selectList(queryWrapper);
         return BeanUtil.copyToList(serveTypeList, ServeTypeSimpleResDTO.class);
     }
-
 }

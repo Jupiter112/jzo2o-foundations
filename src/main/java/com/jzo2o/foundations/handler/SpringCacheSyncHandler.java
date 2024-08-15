@@ -8,7 +8,6 @@ import com.jzo2o.foundations.service.IRegionService;
 import com.jzo2o.foundations.service.IServeService;
 import com.xxl.job.core.handler.annotation.XxlJob;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.autoconfigure.cache.CacheProperties;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
 
@@ -16,58 +15,74 @@ import javax.annotation.Resource;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
- * @className: SpringCacheSyncHandler
- * @description: 缓存同步任务
- * @author: angelee
- * @date: 2024/8/10
+ * springCache缓存同步任务
+ *
+ * @author itcast
+ * @create 2023/8/15 18:14
  **/
-@Component
 @Slf4j
+@Component
 public class SpringCacheSyncHandler {
 
     @Resource
     private IRegionService regionService;
-
+    @Resource
+    private IServeService serveService;
     @Resource
     private RedisTemplate redisTemplate;
-
     @Resource
     private HomeService homeService;
 
-    @Resource
-    private IServeService serveService;
-
     /**
-     * 定时更新缓存
+     * 已启用区域缓存更新
+     * 每日凌晨1点执行
      */
     @XxlJob(value = "activeRegionCacheSync")
-    public void activeRegionCacheSync(){
-        log.info(">>>>>开始进行缓存同步，更新已启用区域");
-        // 1. 清理缓存
-        String key = RedisConstants.CacheName.JZ_CACHE+"::ACTIVE_REGIONS";
+    public void activeRegionCacheSync() {
+        log.info(">>>>>>>>开始进行缓存同步，更新已启用区域");
+        //1.清理缓存
+        String key = RedisConstants.CacheName.JZ_CACHE + "::ACTIVE_REGIONS";
         redisTemplate.delete(key);
-        // 2. 添加缓存,拿到所有开通的区域
-        List<RegionSimpleResDTO> regionSimpleResDTOS = regionService.queryActiveRegionListCache();
-        // 遍历区域，对每个区域的首页服务列表进行删除缓存再添加缓存
-        regionSimpleResDTOS.forEach(item->{
-            String key1 = RedisConstants.CacheName.SERVE_ICON+"::"+item.getId().toString();
-            String key2 = RedisConstants.CacheName.SERVE_TYPE + "::" + item.getId().toString();
-            String key3 = RedisConstants.CacheName.HOT_SERVE + "::" + item.getId().toString();
-            redisTemplate.delete(key1);
-            redisTemplate.delete(key2);
-            redisTemplate.delete(key3);
-            // 查询首页服务列表（添加缓存）
-            homeService.queryServeIconCategoryByRegionId(item.getId());
-            // 查询服务类型
-            homeService.queryServeTypeListByRegionIdCache(item.getId());
-            // 查询热门服务
-            homeService.findHotServeListByRegionIdCache(item.getId());
-        });
 
+        //2.刷新缓存
+        homeService.queryActiveRegionListCache();
         log.info(">>>>>>>>更新已启用区域完成");
     }
+
+    /**
+     * 用户端首页所选城市服务缓存更新
+     * 每日凌晨1点执行
+     */
+    @XxlJob(value = "cityServeCacheSync")
+    public void cityServeCacheSync() {
+        log.info(">>>>>>>>开始进行缓存同步，更新用户端首页所选城市服务");
+        //1.清理所有城市服务缓存
+        Set serveIconCacheKeys = redisTemplate.keys(RedisConstants.CacheName.SERVE_ICON.concat("*"));
+        Set hotServeCacheKeys = redisTemplate.keys(RedisConstants.CacheName.HOT_SERVE.concat("*"));
+        Set serveTypeCacheKeys = redisTemplate.keys(RedisConstants.CacheName.SERVE_TYPE.concat("*"));
+        Set cacheKeys = new HashSet<>();
+        cacheKeys.addAll(serveIconCacheKeys);
+        cacheKeys.addAll(hotServeCacheKeys);
+        cacheKeys.addAll(serveTypeCacheKeys);
+        redisTemplate.delete(cacheKeys);
+
+        //2.获取所有已启用的区域，提取区域id
+        List<RegionSimpleResDTO> regionSimpleResDTOList = regionService.queryActiveRegionList();
+        List<Long> activeRegionIdList = regionSimpleResDTOList.stream().map(RegionSimpleResDTO::getId).collect(Collectors.toList());
+
+        //3.循环对每个已启用城市相关服务缓存更新
+        for (Long regionId : activeRegionIdList) {
+            homeService.queryServeIconCategoryByRegionIdCache(regionId);
+            homeService.findHotServeListByRegionIdCache(regionId);
+            homeService.queryServeTypeListByRegionIdCache(regionId);
+        }
+
+        log.info(">>>>>>>>更新用户端首页所选城市服务完成");
+    }
+
 
     /**
      * 热门服务详情缓存更新
